@@ -522,6 +522,7 @@ if (typeof window !== 'undefined') {
         ["", ""]
       ]);
       const [rawTextBuffer, setRawTextBuffer] = useState("");
+      const [isTextBufferDirty, setIsTextBufferDirty] = useState(false);
       const [seriesColors, setSeriesColors] = useState<Record<string, string>>({ "Serie 1": "#e4590f" });
       const [userManuallyToggledLegend, setUserManuallyToggledLegend] = useState(false);
 
@@ -1059,6 +1060,7 @@ if (typeof window !== 'undefined') {
       const syncToText = (headers, rows, overrideDelim = null) => {
         const activeDelim = overrideDelim || (config.importDelimiter && config.importDelimiter !== "auto" ? config.importDelimiter : null);
         setRawTextBuffer(serializeToCSV(headers, rows, activeDelim));
+        setIsTextBufferDirty(false);
       };
 
       const applyParsedData = (matrix, originalSourceText = null) => {
@@ -1105,6 +1107,7 @@ if (typeof window !== 'undefined') {
           setTableRows(rows);
           if (originalSourceText && typeof originalSourceText === "string" && originalSourceText.trim() !== "") {
             setRawTextBuffer(originalSourceText);
+            setIsTextBufferDirty(false);
           } else syncToText(headers, rows);
 
           const seriesCols = headers.slice(1);
@@ -1197,6 +1200,7 @@ if (typeof window !== 'undefined') {
         setTableHeaders(defaultHeaders);
         setTableRows(defaultRows);
         setRawTextBuffer("");
+        setIsTextBufferDirty(false);
         setSeriesColors({ "Serie 1": "#e4590f" });
         setToast("Diagrammet tömt!");
         setTimeout(() => setToast(""), 2000);
@@ -2258,17 +2262,22 @@ const copyShareLink = async () => {
                 </button>
 
                 <div className="flex items-center bg-slate-800 border border-slate-700">
-                  <select
-                    value={config.printWidth || "2sp"}
-                    onChange={(e) => setConfig({ ...config, printWidth: e.target.value })}
-                    className="bg-transparent w-[74px] sm:w-auto text-[11px] sm:text-xs text-slate-200 font-semibold outline-none py-0.5 sm:py-1 px-1 sm:px-1.5 cursor-pointer border-r border-slate-700 hover:bg-slate-700 transition"
-                  >
-                    <option value="1sp" className="bg-slate-900 text-white">1sp 47,6 mm</option>
-                    <option value="2sp" className="bg-slate-900 text-white">2sp 99,2 mm</option>
-                    <option value="3sp" className="bg-slate-900 text-white">3sp 150,7 mm</option>
-                    <option value="4sp" className="bg-slate-900 text-white">4sp 202,2 mm</option>
-                    <option value="5sp" className="bg-slate-900 text-white">5sp 254 mm</option>
-                  </select>
+                  <div className="relative flex items-center border-r border-slate-700 hover:bg-slate-700 transition">
+                    <select
+                      value={config.printWidth || "2sp"}
+                      onChange={(e) => setConfig({ ...config, printWidth: e.target.value })}
+                      className="appearance-none bg-transparent w-[76px] sm:w-auto text-[11px] sm:text-xs text-slate-200 font-semibold outline-none py-0.5 sm:py-1 pl-1.5 sm:pl-2 pr-4.5 sm:pr-5 cursor-pointer"
+                    >
+                      <option value="1sp" className="bg-slate-900 text-white">1sp 47,6 mm</option>
+                      <option value="2sp" className="bg-slate-900 text-white">2sp 99,2 mm</option>
+                      <option value="3sp" className="bg-slate-900 text-white">3sp 150,7 mm</option>
+                      <option value="4sp" className="bg-slate-900 text-white">4sp 202,2 mm</option>
+                      <option value="5sp" className="bg-slate-900 text-white">5sp 254 mm</option>
+                    </select>
+                    <svg className="w-2.5 h-2.5 text-slate-300 pointer-events-none absolute right-1.5 sm:right-2" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M1 1l4 4 4-4" />
+                    </svg>
+                  </div>
 
                   <button 
                     onClick={downloadPrintPDF} 
@@ -2466,8 +2475,8 @@ const copyShareLink = async () => {
                         <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv,.tsv,.txt,.xlsx,.xls,.xlsb" className="hidden" />
                         <button 
                           type="button"
-                          onClick={() => autoAnalyzeAndBuildChart()}
-                          className="text-xs px-3.5 py-1.5 font-bold border bg-[#e4590f] hover:bg-[#c94d0c] text-white shadow-sm flex items-center space-x-1.5 transition"
+                          onClick={() => autoAnalyzeAndBuildChart(null, isTextBufferDirty && rawTextBuffer.trim() ? rawTextBuffer : null)}
+                          className="text-xs px-3.5 py-1.5 font-bold border border-transparent bg-[#e4590f] hover:bg-[#c94d0c] text-white shadow-sm flex items-center space-x-1.5 transition"
                           title="Läs och analysera datan, strukturera om tabellen och skapa en färdig graf automatiskt"
                         >
                           <span>✨</span>
@@ -2660,14 +2669,10 @@ const copyShareLink = async () => {
 
                       <div className="border p-3 bg-slate-50 border-slate-200">
                         <label className="block text-xs font-bold uppercase mb-1.5">Klistra in direkt</label>
-                        <textarea rows={3} value={rawTextBuffer} onChange={(e) => setRawTextBuffer(e.target.value)} className="w-full text-xs font-mono border p-2 outline-none text-slate-900 bg-white" placeholder="Klistra in tabell eller text..." />
-                        <div className="flex gap-2 mt-2">
-                          <button onClick={() => parseTextToGrid(rawTextBuffer)} className="flex-1 py-1.5 text-xs font-semibold bg-slate-200 hover:bg-slate-300 text-slate-800">
+                        <textarea rows={3} value={rawTextBuffer} onChange={(e) => { setRawTextBuffer(e.target.value); setIsTextBufferDirty(true); }} className="w-full text-xs font-mono border p-2 outline-none text-slate-900 bg-white" placeholder="Klistra in tabell eller text..." />
+                        <div className="mt-2">
+                          <button onClick={() => parseTextToGrid(rawTextBuffer)} className="w-full py-1.5 text-xs font-semibold bg-slate-200 hover:bg-slate-300 text-slate-800">
                             Läs in till tabell
-                          </button>
-                          <button onClick={() => autoAnalyzeAndBuildChart(null, rawTextBuffer)} className="flex-1 py-1.5 text-xs font-bold bg-[#e4590f] hover:bg-[#c94d0c] text-white flex items-center justify-center space-x-1">
-                            <span>✨</span>
-                            <span>Analysera & skapa graf</span>
                           </button>
                         </div>
                       </div>

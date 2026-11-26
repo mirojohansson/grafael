@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, #e5e7eb);
+  }
+}
+
 body {
   font-family: 'Roboto', sans-serif;
   margin: 0;
